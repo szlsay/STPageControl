@@ -7,7 +7,7 @@
 //
 
 #import "ViewController.h"
-
+#import "STPageControl.h"
 @interface ViewController ()
 
 @end
@@ -19,7 +19,15 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    [self.view setBackgroundColor:[UIColor redColor]];
+    STPageControl *pageControl = [STPageControl pageControlWithFrame:CGRectMake(10, 100, 300, 100)
+                                                        numberOfPages:10
+                                                            gapWidth:20
+                                                            diameter:20
+                                                           lineWidth:2];
+    
+    pageControl.coreNormalColor = [UIColor whiteColor];
+    [self.view addSubview:pageControl];
+    
 }
 
 #pragma mark - Delegate 视图委托
