@@ -11,8 +11,16 @@
 @implementation STPageControl
 
 
-#define Width self.frame.size.width
+#define WidthPageControl    self.frame.size.width
+#define HeightPageControl   self.frame.size.height
 
+static CGFloat const  gapWidthDefault  = 10;
+static CGFloat const  lineWidthDefault = 2;
+static CGFloat const  diameterDefault  = 10;
+
+static CGFloat const  gapWidthSystem   = 9;
+static CGFloat const  lineWidthSystem  = 1;
+static CGFloat const  diameterSystem   = 7;
 /**
  *  1.初始化
  */
@@ -41,49 +49,21 @@
     self.backgroundColor = [UIColor clearColor];
     
     // 2.设置属性默认值
-    _coreNormalColor = [UIColor whiteColor];
-//    _coreSelectedColor = 
+    _lineWidth = lineWidthDefault;
+    _gapWidth  = gapWidthDefault;
+    _diameter  = diameterDefault;
+    
+    _hidesForSinglePage = NO;
+    _isShowNumber = NO;
+    
+    _currentPage = 0;
+    _numberOfPages = 0;
 
-    _lineWidth = 4;
-    _gapWidth    = 20;
-    _diameter    = 20;
-        _coreSelectedColor = [UIColor whiteColor];
-    
-    _strokeNormalColor = [UIColor redColor];
-    _strokeSelectedColor = [UIColor greenColor];
-    
-    
-    // 2.设置手势操作
+    // 3.设置手势操作
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self
                                                                          action:@selector(onTapped:)];
     [self addGestureRecognizer:tap];
 }
-
-
-///** 1.内部的普通色 */
-//@property (nonatomic, strong, nullable) UIColor *coreNormalColor;
-///** 2.内部的选中色 */
-//@property (nonatomic, strong, nullable) UIColor *coreSelectedColor;
-///** 3.边线的普通色 */
-//@property (nonatomic, strong, nullable) UIColor *strokeNormalColor;
-///** 4.边线的选中色 */
-//@property (nonatomic, strong, nullable) UIColor *strokeSelectedColor;
-//
-///** 5.当前页,default is 0 */
-//@property (nonatomic) NSInteger currentPage;
-///** 6.总页数,default is 0. value pinned to 0..numberOfPages-1  */
-//@property (nonatomic) NSInteger numberOfPages;
-///** 7.边线宽,default is 2  */
-//@property (nonatomic) NSInteger lineWidth;
-///** 8.圆圈直径,default is 10  */
-//@property (nonatomic) NSInteger diameter;
-///** 9.间隔宽度,default is 10 */
-//@property (nonatomic) NSInteger gapWidth;
-//
-///** 10.单页的时候是否隐藏,hide the the indicator if there is only one page. default is NO*/
-//@property (nonatomic) BOOL hidesForSinglePage;
-///** 11.是否显示数字,default is NO  */
-//@property (nonatomic) BOOL isShowNumber;
 
 /**
  *  3.点击事件
@@ -96,14 +76,23 @@
     CGPoint touchPoint = [gesture locationInView:[gesture view]];
     
     // 1.设置当前页
-    if (touchPoint.x < Width/2) // 1.点击控件的左边
+    if (touchPoint.x < WidthPageControl/2) // 1.点击控件的左边
     {
+        if (touchPoint.x < (self.diameter+self.gapWidth)) {
+            self.currentPage = 0;
+        }
+        
         if (self.currentPage>0)
         {
             self.currentPage -= 1;
         }
         
     } else {                    // 2.点击控件的右边
+        
+        if (touchPoint.x > WidthPageControl-(self.diameter+self.gapWidth)) {
+            self.currentPage = self.numberOfPages-1;
+        }
+        
         if (self.currentPage<self.numberOfPages-1)
         {
             self.currentPage += 1;
@@ -119,24 +108,30 @@
 }
 
 /**
- *  4.重新绘制
+ *  4.绘制图层
  *
  *  @param rect <#rect description#>
  */
 - (void)drawRect:(CGRect)rect
 {
+    // 1.是否开启隐藏单页
+    if (self.hidesForSinglePage && self.numberOfPages <= 1) {
+        return;
+    }
+    
     // 1.获得处理的上下文
     CGContextRef myContext = UIGraphicsGetCurrentContext();
     
     // 2.控件的总宽度
-    NSInteger totalWidth = self.numberOfPages*self.diameter + (self.numberOfPages-1)*self.gapWidth;
+    NSInteger totalWidth = self.numberOfPages * (self.gapWidth + self.diameter) - self.gapWidth;
     
+
     // 3.绘制图形
     for (int i = 0; i < self.numberOfPages; i++) {
         
         // 1.设置Rect
-        CGFloat circleX = (self.frame.size.width-totalWidth)/2 + i*(self.diameter+self.gapWidth);
-        CGFloat circleY = (self.frame.size.height - self.diameter)/2;
+        CGFloat circleX = (WidthPageControl-totalWidth)/2 + i*(self.diameter+self.gapWidth);
+        CGFloat circleY = (HeightPageControl - self.diameter)/2;
         CGFloat circleW = self.diameter;
         CGFloat circleH = self.diameter;
         CGRect  circleFrame = CGRectMake(circleX, circleY, circleW, circleH);
@@ -146,60 +141,196 @@
         
         if (i == self.currentPage) {    // 1.选中的视图的设置
             
-            // 1、填充整个
+            // 1.填充整个
             CGContextSetFillColorWithColor(myContext, [self.coreSelectedColor CGColor]);
             CGContextFillEllipseInRect(myContext, circleFrame);
             
             // 2.填充边线
-            CGContextSetStrokeColorWithColor(myContext, [self.strokeSelectedColor CGColor]);
+            CGContextSetStrokeColorWithColor(myContext, [self.lineSelectedColor CGColor]);
             CGContextStrokeEllipseInRect(myContext, circleFrame);
 
             // 3.填充数字
-            
-            CGRect frame = circleFrame;
-            frame.origin.y = circleY-2;
-            NSString *pageNumber = [NSString stringWithFormat:@"%i", i+1];
-            CGContextSetFillColorWithColor(myContext, [[UIColor whiteColor] CGColor]);
-            NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
-            paragraph.alignment = NSTextAlignmentCenter;
-            [pageNumber drawInRect:frame
-                    withAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:self.diameter],
-                                     NSForegroundColorAttributeName:[UIColor redColor],
-                                     NSParagraphStyleAttributeName:paragraph}];
+            if (self.isShowNumber) {
+                
+                // 3.1 显示的内容
+                NSString *pageNumber = [NSString stringWithFormat:@"%i", i+1];
+                
+                // 3.2 设置居中
+                NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+                paragraph.alignment = NSTextAlignmentCenter;
+                
+                // 3.3 设置字体尺寸
+                CGFloat fontSize     = self.diameter -  self.lineWidth;
+                CGFloat fontY        = (HeightPageControl- fontSize)/ 2 - self.diameter/10;
+                circleFrame.origin.y = fontY;
+                
+                
+                [pageNumber drawInRect:circleFrame
+                        withAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:fontSize],
+                                         NSForegroundColorAttributeName:self.textSelectedColor,
+                                         NSParagraphStyleAttributeName:paragraph}];
+            }
             
         }else {                         // 2.正常的视图的设置
+            
+            // 1.填充整个
             CGContextSetFillColorWithColor(myContext, [self.coreNormalColor CGColor]);
             CGContextFillEllipseInRect(myContext, circleFrame);
             
-            CGContextSetStrokeColorWithColor(myContext, [self.strokeNormalColor CGColor]);
+            // 2.填充边线
+            CGContextSetStrokeColorWithColor(myContext, [self.lineNormalColor CGColor]);
             CGContextStrokeEllipseInRect(myContext, circleFrame);
             
             // 3.填充数字
-            NSString *pageNumber = [NSString stringWithFormat:@"%i", i+1];
-            CGContextSetFillColorWithColor(myContext, [[UIColor whiteColor] CGColor]);
-            NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
-            paragraph.alignment = NSTextAlignmentCenter;
-            [pageNumber drawInRect:circleFrame
-                    withAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:self.diameter-4],
-                                     NSForegroundColorAttributeName:[UIColor redColor],
-                                     NSParagraphStyleAttributeName:paragraph}];
+            if (self.isShowNumber) {
+                // 3.1 显示的内容
+                NSString *pageNumber = [NSString stringWithFormat:@"%i", i+1];
+                
+                // 3.2 设置居中
+                NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+                paragraph.alignment = NSTextAlignmentCenter;
+                
+                // 3.3 设置字体尺寸
+                CGFloat fontSize     = self.diameter -  self.lineWidth - 4;
+                CGFloat fontY        = (HeightPageControl- fontSize)/ 2 - self.diameter/10;
+                circleFrame.origin.y = fontY;
+                
+                [pageNumber drawInRect:circleFrame
+                        withAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:fontSize],
+                                         NSForegroundColorAttributeName:self.textNormalColor,
+                                         NSParagraphStyleAttributeName:paragraph}];
+            }
         }
     }
 }
 
-+ (STPageControl *)pageControlWithFrame:(CGRect)frame
-                          numberOfPages:(NSInteger)numberOfPages
-                               gapWidth:(NSInteger)gapWidth
-                               diameter:(NSInteger)diameter
-                              lineWidth:(NSInteger)lineWidth
-
++ (STPageControl * _Nonnull)pageControlWithFrame:(CGRect)frame
+                                   numberOfPages:(NSInteger)numberOfPages
+                                        gapWidth:(NSInteger)gapWidth
+                                        diameter:(NSInteger)diameter
+                                       lineWidth:(NSInteger)lineWidth
+                                 coreNormalColor:(UIColor *__nullable)coreNormalColor
+                               coreSelectedColor:(UIColor *__nullable)coreSelectedColor
+                                 lineNormalColor:(UIColor *__nullable)lineNormalColor
+                               lineSelectedColor:(UIColor *__nullable)lineSelectedColor
+                                 textNormalColor:(UIColor *__nullable)textNormalColor
+                               textSelectedColor:(UIColor *__nullable)textSelectedColor
+                              hidesForSinglePage:(BOOL)hidesForSinglePage
+                                      ShowNumber:(BOOL)isShowNumber
 {
+    // 1.控件的最小的宽度
+    NSInteger miniWidth = numberOfPages * (gapWidth + diameter) - gapWidth;
+    
+    // 2.控件的尺寸小于最小的尺寸时，将赋值最小的尺寸
+    if (frame.size.width < miniWidth) {
+        frame.size.width = miniWidth + gapWidth;
+    }
+    
+    if (frame.size.height < diameter) {
+        frame.size.height = diameter + gapWidth;
+    }
+
     STPageControl *pageControl = [[STPageControl alloc]initWithFrame:frame];
+    
     pageControl.numberOfPages = numberOfPages;
-    pageControl.gapWidth = gapWidth;
-    pageControl.diameter = diameter;
-    pageControl.lineWidth = lineWidth;
+    pageControl.gapWidth      = gapWidth;
+    pageControl.diameter      = diameter;
+    pageControl.lineWidth     = lineWidth;
+    
+    pageControl.coreNormalColor   = coreNormalColor;
+    pageControl.coreSelectedColor = coreSelectedColor;
+    pageControl.lineNormalColor   = lineNormalColor;
+    pageControl.lineSelectedColor = lineSelectedColor;
+    pageControl.textNormalColor   = textNormalColor;
+    pageControl.textSelectedColor = textSelectedColor;
+    
+    pageControl.hidesForSinglePage = hidesForSinglePage;
+    pageControl.isShowNumber       = isShowNumber;
+    
     return pageControl;
+}
+
++ (STPageControl *)pageControlSystemWithFrame:(CGRect)frame
+                                numberOfPages:(NSInteger)numberOfPages
+                           pageIndicatorColor:(UIColor *)pageIndicatorColor
+                    currentPageIndicatorColor:(UIColor *)currentPageIndicatorColor
+{
+    return [STPageControl pageControlWithFrame:frame
+                                 numberOfPages:numberOfPages
+                                      gapWidth:gapWidthSystem
+                                      diameter:diameterSystem
+                                     lineWidth:lineWidthSystem
+                               coreNormalColor:pageIndicatorColor
+                             coreSelectedColor:currentPageIndicatorColor
+                               lineNormalColor:pageIndicatorColor
+                             lineSelectedColor:currentPageIndicatorColor
+                               textNormalColor:[UIColor clearColor]
+                             textSelectedColor:[UIColor clearColor]
+                            hidesForSinglePage:NO
+                                    ShowNumber:NO];
+
+}
+
++ (STPageControl * _Nonnull)pageControlDefaultWithFrame:(CGRect)frame
+                                          numberOfPages:(NSInteger)numberOfPages
+                                        coreNormalColor:(UIColor *__nullable)coreNormalColor
+                                      coreSelectedColor:(UIColor *__nullable)coreSelectedColor
+                                        lineNormalColor:(UIColor *__nullable)lineNormalColor
+                                      lineSelectedColor:(UIColor *__nullable)lineSelectedColor
+{
+    return [STPageControl pageControlWithFrame:frame
+                                 numberOfPages:numberOfPages
+                                      gapWidth:gapWidthDefault
+                                      diameter:diameterDefault
+                                     lineWidth:lineWidthSystem
+                               coreNormalColor:coreNormalColor
+                             coreSelectedColor:coreSelectedColor lineNormalColor:lineNormalColor lineSelectedColor:lineSelectedColor
+                               textNormalColor:[UIColor clearColor]
+                             textSelectedColor:[UIColor clearColor]
+                            hidesForSinglePage:NO
+                                    ShowNumber:NO];
+}
+
+- (void)setIsShowNumber:(BOOL)isShowNumber
+{
+    _isShowNumber = isShowNumber;
+    [self setNeedsDisplay];
+}
+
+- (void)setHidesForSinglePage:(BOOL)hidesForSinglePage
+{
+    _hidesForSinglePage = hidesForSinglePage;
+    [self setNeedsDisplay];
+}
+
+- (void)setNumberOfPages:(NSInteger)numberOfPages
+{
+    _numberOfPages = numberOfPages;
+    [self setNeedsDisplay];
+}
+
+- (void)setCurrentPage:(NSInteger)currentPage
+{
+    _currentPage = currentPage;
+    [self setNeedsDisplay];
+}
+
+- (void)setGapWidth:(NSInteger)gapWidth
+{
+    _gapWidth = gapWidth;
+    [self setNeedsDisplay];
+}
+
+- (void)setDiameter:(NSInteger)diameter
+{
+    _diameter = diameter;
+    [self setNeedsDisplay];
+}
+
+- (void)setLineWidth:(NSInteger)lineWidth
+{
+    _lineWidth = lineWidth;
+    [self setNeedsDisplay];
 }
 
 @end
