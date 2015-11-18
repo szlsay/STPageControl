@@ -160,7 +160,7 @@ static CGFloat const  diameterSystem   = 7;
                 paragraph.alignment = NSTextAlignmentCenter;
                 
                 // 3.3 设置字体尺寸
-                CGFloat fontSize     = self.diameter -  self.lineWidth;
+                CGFloat fontSize     = (self.diameter -  self.lineWidth);
                 CGFloat fontY        = (HeightPageControl- fontSize)/ 2 - self.diameter/10;
                 circleFrame.origin.y = fontY;
                 
@@ -191,7 +191,7 @@ static CGFloat const  diameterSystem   = 7;
                 paragraph.alignment = NSTextAlignmentCenter;
                 
                 // 3.3 设置字体尺寸
-                CGFloat fontSize     = self.diameter -  self.lineWidth - 4;
+                CGFloat fontSize     = (self.diameter -  self.lineWidth)*0.8;
                 CGFloat fontY        = (HeightPageControl- fontSize)/ 2 - self.diameter/10;
                 circleFrame.origin.y = fontY;
                 
